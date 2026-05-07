@@ -1,0 +1,26 @@
+// BUDDICA TOURING 車両チェック Service Worker v8
+const CACHE = 'buddica-touring-damage-v11';
+
+self.addEventListener('install', e => {
+  // キャッシュはしない（常に最新を取得）
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  // 古いキャッシュを全削除
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  // supabase は素通し
+  if (e.request.url.includes('supabase.co')) return;
+  // 常にネットワークから取得（キャッシュ一切使わない）
+  e.respondWith(
+    fetch(e.request, { cache: 'no-store' }).catch(() => {
+      return new Response('offline', { status: 503 });
+    })
+  );
+});
