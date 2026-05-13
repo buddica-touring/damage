@@ -589,26 +589,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
     <div class="login-logo">BUDDICA TOURING</div>
     <div class="login-title">車両チェック</div>
 
-    <!-- STEP 1: 店舗選択 -->
-    <div id="loginStep1" style="width:100%;display:flex;flex-direction:column;align-items:center;">
-      <div class="login-sub">店舗を選択してください</div>
-      <div class="store-sel-wrap">
-        <button class="store-sel-card" onclick="selectStore('takamatsu')">
-          <div class="store-icon">🌺</div>
-          <div class="store-info">
-            <div class="store-name">BUDDICA TOURING 高松店</div>
-            <div class="store-sub">香川県高松市</div>
-          </div>
-        </button>
-        <button class="store-sel-card" onclick="selectStore('sapporo')">
-          <div class="store-icon">❄️</div>
-          <div class="store-info">
-            <div class="store-name">札幌店</div>
-            <div class="store-sub">北海道札幌市</div>
-          </div>
-        </button>
-      </div>
-    </div>
+    <!-- STEP 1: 店舗選択（高松店のみのため自動選択） -->
+    <div id="loginStep1" style="width:100%;display:none;"></div>
 
     <!-- STEP 2: スタッフ選択 -->
     <div id="loginStep2" class="login-step2">
@@ -1076,21 +1058,10 @@ if('serviceWorker' in navigator){
 // ===== スタッフ管理 =====
 // store:'both'=両店舗共通, 'takamatsu'=高松のみ, 'sapporo'=札幌のみ
 const STAFF_LIST=[
-  {id:'oshita',    name:'大下',   emoji:'👨‍💼', store:'both'},
-  {id:'takeyama',  name:'武山',   emoji:'👨‍💼', store:'both'},
-  {id:'saito',     name:'斎藤',   emoji:'👨‍💼', store:'both'},
-  {id:'ie',        name:'伊江',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'hirose',    name:'廣瀬',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'mikuni',    name:'三國',   emoji:'👨‍💼', store:'both'},
-  {id:'akamine',   name:'赤嶺',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'oshiro',    name:'大城',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'tonaki',    name:'渡名喜', emoji:'👨‍💼', store:'takamatsu'},
-  {id:'nishimura', name:'西村',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'nakama',    name:'仲間',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'arimoto',   name:'有本',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'koyama',    name:'小山',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'yoshida',   name:'吉田',   emoji:'👨‍💼', store:'takamatsu'},
-  {id:'fukudome',  name:'福留',   emoji:'👨‍💼', store:'takamatsu'},
+  {id:'oshita',    name:'大下',     emoji:'👨‍💼', store:'takamatsu'},
+  {id:'toshima',   name:'戸島',     emoji:'👨‍💼', store:'takamatsu'},
+  {id:'takeyama',  name:'竹山',     emoji:'👨‍💼', store:'takamatsu'},
+  {id:'member',    name:'スタッフ', emoji:'👤',   store:'takamatsu'},
 ];
 let currentStaff=localStorage.getItem('hm_staff')||null;
 let currentStore=localStorage.getItem('hm_store')||'takamatsu';
@@ -1168,37 +1139,40 @@ function updateSmAiBtn(){
 // 旧AIカメラフロー変数（削除済み）
 
 function initLogin(){
-  // 常にSTEP1（店舗選択）から開始
-  showStep1();
+  // BUDDICA TOURING 高松店専用 — 店舗選択を撤去し直接スタッフ選択へ
+  currentStore='takamatsu';
+  localStorage.setItem('hm_store','takamatsu');
+  showStep2('takamatsu');
 }
 function showStep1(){
-  document.getElementById('loginStep1').style.display='flex';
-  document.getElementById('loginStep2').classList.remove('active');
+  // 店舗選択は撤去済 — 直接 step2 へ
+  showStep2('takamatsu');
 }
 function selectStore(store){
-  currentStore=store;
-  localStorage.setItem('hm_store',store);
-  showStep2(store);
+  currentStore='takamatsu';
+  localStorage.setItem('hm_store','takamatsu');
+  showStep2('takamatsu');
 }
 function showStep2(store){
   document.getElementById('loginStep1').style.display='none';
   document.getElementById('loginStep2').classList.add('active');
   const badge=document.getElementById('loginStoreBadge');
-  badge.textContent=store==='takamatsu'?'🌺 BUDDICA TOURING 高松店':'❄️ 札幌店';
+  if(badge) badge.textContent='🌺 BUDDICA TOURING 高松店';
   const grid=document.getElementById('staffGrid');
-  const filtered=STAFF_LIST.filter(s=>s.store==='both'||s.store===store);
+  const filtered=STAFF_LIST.filter(s=>s.store==='both'||s.store==='takamatsu');
   grid.innerHTML=filtered.map(s=>`
     <button class="login-btn" onclick="selectStaff('${s.id}','${s.name}')">
       <div class="avatar">${s.emoji}</div>${s.name}
     </button>`).join('');
 }
 function backToStep1(){
-  showStep1();
+  // 高松店専用 — 戻り先は step2 のみ
+  showStep2('takamatsu');
 }
 function selectStaff(id,name){
   currentStaff=name;
   localStorage.setItem('hm_staff',name);
-  localStorage.setItem('hm_store',currentStore);
+  localStorage.setItem('hm_store','takamatsu');
   updateStaffHeader();
   goto('sm');
   initPresence();
@@ -1209,10 +1183,9 @@ function updateStaffHeader(){
   const el=document.getElementById('smStaffLabel');
   if(el) el.textContent=currentStaff||'';
   const hd=document.getElementById('smHdStore');
-  const storeLabel=currentStore==='takamatsu'?'BUDDICA TOURING 高松店':'札幌店';
-  if(hd) hd.textContent=storeLabel+' — ';
+  if(hd) hd.textContent='BUDDICA TOURING 高松店 — ';
   const appLink=document.getElementById('smAppLink');
-  if(appLink) appLink.href=currentStore==='takamatsu'?'https://nosh2318.github.io/takamatsu-project/':'https://nosh2318.github.io/spk-task/';
+  if(appLink) appLink.href='https://buddica-touring.github.io/app/';
 }
 
 // ===== ステータス定義 =====
@@ -1324,7 +1297,7 @@ async function loadVehicles(){
     vehiclesCache=vehicles;
     renderVehicleList(vehiclesCache,currentStore);
     updateSmStats(vehiclesCache);
-    const storeLabel=currentStore==='takamatsu'?'BUDDICA TOURING 高松店':'札幌店';
+    const storeLabel="BUDDICA TOURING 高松店";
     const el=document.getElementById('smHdStore');
     if(el) el.textContent=`${storeLabel} — ${vehicles.length}台`;
   }catch(e){
@@ -1526,7 +1499,7 @@ async function openVehicle(vehicleId){
 function renderS0(v){
   const vInfo=v.vehicles||{};
   const st=STATUS_DEF[v.status]||STATUS_DEF.ready;
-  const storeLabel=currentStore==='takamatsu'?'BUDDICA TOURING 高松店':'札幌店';
+  const storeLabel="BUDDICA TOURING 高松店";
   setText('s0StoreLabel',`BUDDICA TOURING / ${storeLabel}`);
   setText('s0Vno',vInfo.plate_no||v.id);
   setText('s0Model',`${vInfo.name||''} ／ ${v.id}`);
@@ -2324,7 +2297,7 @@ async function loadChain(vehicleId){
 
 // ===== テストリセット =====
 function openTestReset(){
-  const storeLabel=currentStore==='takamatsu'?'BUDDICA TOURING 高松店':'札幌店';
+  const storeLabel="BUDDICA TOURING 高松店";
   const overlay=document.createElement('div');
   overlay.id='testResetOverlay';
   overlay.style.cssText='position:fixed;inset:0;background:#00000088;z-index:600;display:flex;align-items:flex-end;justify-content:center;max-width:520px;margin:0 auto;';
