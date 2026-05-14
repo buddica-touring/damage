@@ -606,7 +606,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 <div class="screen" id="sm">
   <div class="sm-hd">
     <div class="sm-hd-top">
-      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.3</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
+      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.4</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:#88aacc;" id="smStaffLabel"></div>
         <button onclick="reloadVehicles()" id="smReloadBtn" style="font-size:9px;color:#88ccff;background:#ffffff10;border:1px solid #88ccff30;border-radius:6px;padding:3px 8px;cursor:pointer;" title="車両一覧を更新">🔄</button>
@@ -1211,10 +1211,11 @@ async function loadVehicles(){
   try{
     let vehicles=[];
     if(currentStore==='takamatsu'){
-      // 高松: bt_cars + vehicle_twins + fleet/reservations(予約連動) + 走行距離
+      // 高松: bt_vehicles（車両マスター・管理APPと共通）+ vehicle_twins + fleet/reservations + 走行距離
+      // v2.6.4: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
       const _n=new Date();const today=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
       const [{data:cars},{data:twins},{data:fleetAll},{data:resvAll},{data:mileageAll}]=await Promise.all([
-        sb.from('bt_cars').select('id,name,plate,class_id,status').eq('store_id','takamatsu').eq('status','active').order('class_id').order('id'),
+        sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').eq('active',true).order('type').order('code'),
         sb.from('vehicle_twins').select('id,status,current_damages,current_resv_no,current_customer,last_check_at,last_check_staff,last_event_id,odometer,rental_count').eq('store','takamatsu'),
         sb.from('bt_fleet').select('reservation_id,vehicle_code'),
         sb.from('bt_reservations').select('id,name,lend_date,lend_time,return_date,return_time,ota').not('status','eq','cancelled').not('status','eq','キャンセル').lte('start_date',today).gte('end_date',today).order('start_date',{ascending:false}).limit(300),
@@ -1231,22 +1232,24 @@ async function loadVehicles(){
       const odometerMap={};
       (mileageAll||[]).forEach(m=>{if(!odometerMap[m.vehicle_code])odometerMap[m.vehicle_code]=m.odometer_km;});
       vehicles=(cars||[]).map(car=>{
-        const resv=vcResvMap[car.id];
-        const twStatus=twMap[car.id]?.status||'ready';
+        // bt_vehicles では code が主キー（旧 bt_cars の id に相当）
+        const vcode=car.code;
+        const resv=vcResvMap[vcode];
+        const twStatus=twMap[vcode]?.status||'ready';
         const effectiveStatus=(twStatus==='out'&&!resv)?'ready':twStatus;
         return {
-          id:car.id,
+          id:vcode,
           status:effectiveStatus,
-          current_damages:twMap[car.id]?.current_damages||[],
-          current_resv_no:resv?.id||(effectiveStatus==='out'?twMap[car.id]?.current_resv_no:null)||null,
-          current_customer:resv?.name||(effectiveStatus==='out'?twMap[car.id]?.current_customer:null)||null,
+          current_damages:twMap[vcode]?.current_damages||[],
+          current_resv_no:resv?.id||(effectiveStatus==='out'?twMap[vcode]?.current_resv_no:null)||null,
+          current_customer:resv?.name||(effectiveStatus==='out'?twMap[vcode]?.current_customer:null)||null,
           current_resv:resv||null,
-          last_check_at:twMap[car.id]?.last_check_at||null,
-          last_check_staff:twMap[car.id]?.last_check_staff||null,
-          last_event_id:twMap[car.id]?.last_event_id||null,
-          odometer:odometerMap[car.id]||twMap[car.id]?.odometer||0,
-          rental_count:twMap[car.id]?.rental_count||0,
-          vehicles:{name:car.name,plate_no:car.plate,code:car.id,class_id:car.class_id}
+          last_check_at:twMap[vcode]?.last_check_at||null,
+          last_check_staff:twMap[vcode]?.last_check_staff||null,
+          last_event_id:twMap[vcode]?.last_event_id||null,
+          odometer:odometerMap[vcode]||twMap[vcode]?.odometer||0,
+          rental_count:twMap[vcode]?.rental_count||0,
+          vehicles:{name:car.name,plate_no:car.plate_no,code:vcode,class_id:car.type,year:car.year,color:car.color,seats:car.seats}
         };
       });
     } else {
