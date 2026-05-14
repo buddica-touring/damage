@@ -606,7 +606,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 <div class="screen" id="sm">
   <div class="sm-hd">
     <div class="sm-hd-top">
-      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.4</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
+      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.5</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:#88aacc;" id="smStaffLabel"></div>
         <button onclick="reloadVehicles()" id="smReloadBtn" style="font-size:9px;color:#88ccff;background:#ffffff10;border:1px solid #88ccff30;border-radius:6px;padding:3px 8px;cursor:pointer;" title="車両一覧を更新">🔄</button>
@@ -1046,9 +1046,24 @@ window.addEventListener('unhandledrejection',function(ev){
 });
 
 // ===== Supabase 初期化 =====
+// v2.6.5: BUDDICA TOURING の正しい anon key に修正（旧: HANDYMAN(NHA)のkeyが入っていた致命バグ）
 const SUPA_URL='https://ggqugvyskyiblxiycpci.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrcnh0dGJuYXdrY2xzaGN6c2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4Nzg1NTAsImV4cCI6MjA4NzQ1NDU1MH0.kDC_UDVWvcrS97wzqQ3NXP79ewjgYwF4vSFdV7y06S8';
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdncXVndnlza3lpYmx4aXljcGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMDc3NjksImV4cCI6MjA5MzY4Mzc2OX0.uNhWcBd_Dl5nzemZDQfJ8mQV6iY73MwystGGpTRPC18';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'sb-ggqugvyskyiblxiycpci-auth-token'}});
+// 親APP（/app/）の認証セッションがあれば同期（同origin localStorage共有）
+(async()=>{try{
+  const keys=Object.keys(localStorage).filter(k=>k.startsWith('sb-')&&k.endsWith('-auth-token'));
+  for(const k of keys){
+    try{
+      const v=JSON.parse(localStorage.getItem(k));
+      if(v&&v.access_token&&v.refresh_token){
+        await sb.auth.setSession({access_token:v.access_token,refresh_token:v.refresh_token});
+        console.log('[damage] auth session synced from main app');
+        break;
+      }
+    }catch(e){}
+  }
+}catch(e){console.warn('[damage] auth sync failed',e);}})();
 
 // ===== PWA サービスワーカー登録 =====
 if('serviceWorker' in navigator){
@@ -1212,7 +1227,7 @@ async function loadVehicles(){
     let vehicles=[];
     if(currentStore==='takamatsu'){
       // 高松: bt_vehicles（車両マスター・管理APPと共通）+ vehicle_twins + fleet/reservations + 走行距離
-      // v2.6.4: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
+      // v2.6.5: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
       const _n=new Date();const today=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
       const [{data:cars},{data:twins},{data:fleetAll},{data:resvAll},{data:mileageAll}]=await Promise.all([
         sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').eq('active',true).order('type').order('code'),
