@@ -606,7 +606,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 <div class="screen" id="sm">
   <div class="sm-hd">
     <div class="sm-hd-top">
-      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.5</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
+      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.6</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:#88aacc;" id="smStaffLabel"></div>
         <button onclick="reloadVehicles()" id="smReloadBtn" style="font-size:9px;color:#88ccff;background:#ffffff10;border:1px solid #88ccff30;border-radius:6px;padding:3px 8px;cursor:pointer;" title="車両一覧を更新">🔄</button>
@@ -1046,7 +1046,7 @@ window.addEventListener('unhandledrejection',function(ev){
 });
 
 // ===== Supabase 初期化 =====
-// v2.6.5: BUDDICA TOURING の正しい anon key に修正（旧: HANDYMAN(NHA)のkeyが入っていた致命バグ）
+// v2.6.6: BUDDICA TOURING の正しい anon key に修正（旧: HANDYMAN(NHA)のkeyが入っていた致命バグ）
 const SUPA_URL='https://ggqugvyskyiblxiycpci.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdncXVndnlza3lpYmx4aXljcGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMDc3NjksImV4cCI6MjA5MzY4Mzc2OX0.uNhWcBd_Dl5nzemZDQfJ8mQV6iY73MwystGGpTRPC18';
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'sb-ggqugvyskyiblxiycpci-auth-token'}});
@@ -1227,7 +1227,7 @@ async function loadVehicles(){
     let vehicles=[];
     if(currentStore==='takamatsu'){
       // 高松: bt_vehicles（車両マスター・管理APPと共通）+ vehicle_twins + fleet/reservations + 走行距離
-      // v2.6.5: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
+      // v2.6.6: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
       const _n=new Date();const today=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
       const [{data:cars},{data:twins},{data:fleetAll},{data:resvAll},{data:mileageAll}]=await Promise.all([
         sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').eq('active',true).order('type').order('code'),
@@ -1326,13 +1326,15 @@ async function loadVehicles(){
 }
 
 // ===== クラス定義 =====
+// v2.6.6: BUDDICA TOURING 高松店のクラス定義（AA含む7クラス）
 const NAHA_CLASS_DEF={
-  'A':{name:'Aクラス',label:'アルファード'},
-  'B':{name:'Bクラス',label:'ノアH / ヴォクシー / セレナH / アルファードM / ヴェルファイア'},
-  'C':{name:'Cクラス',label:'ライズ / ヤリスクロス（コンパクトSUV）'},
-  'D':{name:'Dクラス',label:'ノアM / エスクァイア / セレナM（ガソリンミニバン）'},
-  'F':{name:'Fクラス',label:'アクア / ノート / ヴィッツ（コンパクト）'},
-  'H':{name:'Hクラス',label:'プリウス / プリウスα（ハイブリッドセダン）'},
+  'AA':{name:'AAクラス',label:'ハイエンド車両（ベンツ / ランボ / ロールス / フェラーリ等）'},
+  'A':{name:'Aクラス',label:'高級系MV（アルファード / D5）'},
+  'B':{name:'Bクラス',label:'一般MV（ノア / セレナ / ヴォクシー）'},
+  'C':{name:'Cクラス',label:'コンパクトSUV（ロッキー / ヤリスクロス）'},
+  'S':{name:'Sクラス',label:'SUV（ハリアー / RAV4）'},
+  'H':{name:'Hクラス',label:'セダン（カムリ等）'},
+  'F':{name:'Fクラス',label:'コンパクト（アクア / ヴィッツ）'},
 };
 const SPK_CLASS_DEF={
   'LUX':{name:'高級ミニバン',label:'アルファード / ヴェルファイア'},
@@ -1376,7 +1378,7 @@ function renderVehicleList(vehicles, store){
     if(!groups[cid]) groups[cid]=[];
     groups[cid].push(v);
   });
-  const classOrder=st2==='takamatsu'?['A','B','C','D','F','H']:['LUX','MPV','SUV','CSUV','SDN','CPT','OTH'];
+  const classOrder=st2==='takamatsu'?['AA','A','B','C','S','H','F']:['LUX','MPV','SUV','CSUV','SDN','CPT','OTH'];
 
   let html='';
   classOrder.forEach(cid=>{
