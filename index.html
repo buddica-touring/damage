@@ -583,7 +583,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 </head>
 <body>
 
-<!-- ==================== LOGIN: スタッフ選択 ==================== -->
+<!-- ==================== LOGIN: 起動画面（スタッフ選択撤去） ==================== -->
 <div class="screen active" id="login">
   <div class="login-inner">
     <div class="login-logo">BUDDICA TOURING</div>
@@ -592,12 +592,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
     <!-- STEP 1: 店舗選択（高松店のみのため自動選択） -->
     <div id="loginStep1" style="width:100%;display:none;"></div>
 
-    <!-- STEP 2: スタッフ選択 -->
+    <!-- STEP 2: チェック開始 -->
     <div id="loginStep2" class="login-step2">
-      <button class="login-back" onclick="backToStep1()">‹ 店舗を選び直す</button>
       <div class="login-store-badge" id="loginStoreBadge"></div>
-      <div class="login-sub" style="margin-bottom:20px;">担当スタッフを選択してください</div>
-      <div class="login-grid" id="staffGrid"></div>
+      <div class="login-sub" style="margin-bottom:24px;color:#88aacc;font-size:13px;">BUDDICA TOURING 高松店</div>
+      <button id="startCheckBtn" onclick="startCheck()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;padding:18px 36px;border-radius:14px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(37,99,235,.4);letter-spacing:2px;min-width:240px;font-family:inherit">🚗 チェックする</button>
+      <div style="margin-top:16px;font-size:11px;color:#557799;">タップして作業を開始</div>
     </div>
   </div>
 </div>
@@ -1140,15 +1140,12 @@ function updateSmAiBtn(){
 // 旧AIカメラフロー変数（削除済み）
 
 function initLogin(){
-  // BUDDICA TOURING 高松店専用 — 店舗選択を撤去し直接スタッフ選択へ
+  // BUDDICA TOURING 高松店専用 — 店舗・スタッフ選択を撤去し「チェックする」ボタンのみ
   currentStore='takamatsu';
   localStorage.setItem('hm_store','takamatsu');
   showStep2('takamatsu');
 }
-function showStep1(){
-  // 店舗選択は撤去済 — 直接 step2 へ
-  showStep2('takamatsu');
-}
+function showStep1(){ showStep2('takamatsu'); }
 function selectStore(store){
   currentStore='takamatsu';
   localStorage.setItem('hm_store','takamatsu');
@@ -1159,20 +1156,23 @@ function showStep2(store){
   document.getElementById('loginStep2').classList.add('active');
   const badge=document.getElementById('loginStoreBadge');
   if(badge) badge.textContent='🌺 BUDDICA TOURING 高松店';
-  const grid=document.getElementById('staffGrid');
-  const filtered=STAFF_LIST.filter(s=>s.store==='both'||s.store==='takamatsu');
-  grid.innerHTML=filtered.map(s=>`
-    <button class="login-btn" onclick="selectStaff('${s.id}','${s.name}')">
-      <div class="avatar">${s.emoji}</div>${s.name}
-    </button>`).join('');
 }
-function backToStep1(){
-  // 高松店専用 — 戻り先は step2 のみ
-  showStep2('takamatsu');
+function backToStep1(){ showStep2('takamatsu'); }
+function startCheck(){
+  // スタッフ選択を撤去し、直接マスタ画面へ遷移
+  currentStaff='スタッフ';
+  localStorage.setItem('hm_staff','スタッフ');
+  localStorage.setItem('hm_store','takamatsu');
+  updateStaffHeader();
+  goto('sm');
+  initPresence();
+  startAutoRefresh();
+  subscribeRealtime();
 }
+// 互換性: 旧 selectStaff 呼び出しが残っていても動作するようstub
 function selectStaff(id,name){
-  currentStaff=name;
-  localStorage.setItem('hm_staff',name);
+  currentStaff=name||'スタッフ';
+  localStorage.setItem('hm_staff',currentStaff);
   localStorage.setItem('hm_store','takamatsu');
   updateStaffHeader();
   goto('sm');
