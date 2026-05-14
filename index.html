@@ -606,7 +606,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 <div class="screen" id="sm">
   <div class="sm-hd">
     <div class="sm-hd-top">
-      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.6</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
+      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.6.7</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:#88aacc;" id="smStaffLabel"></div>
         <button onclick="reloadVehicles()" id="smReloadBtn" style="font-size:9px;color:#88ccff;background:#ffffff10;border:1px solid #88ccff30;border-radius:6px;padding:3px 8px;cursor:pointer;" title="車両一覧を更新">🔄</button>
@@ -1046,7 +1046,7 @@ window.addEventListener('unhandledrejection',function(ev){
 });
 
 // ===== Supabase 初期化 =====
-// v2.6.6: BUDDICA TOURING の正しい anon key に修正（旧: HANDYMAN(NHA)のkeyが入っていた致命バグ）
+// v2.6.7: BUDDICA TOURING の正しい anon key に修正（旧: HANDYMAN(NHA)のkeyが入っていた致命バグ）
 const SUPA_URL='https://ggqugvyskyiblxiycpci.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdncXVndnlza3lpYmx4aXljcGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMDc3NjksImV4cCI6MjA5MzY4Mzc2OX0.uNhWcBd_Dl5nzemZDQfJ8mQV6iY73MwystGGpTRPC18';
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'sb-ggqugvyskyiblxiycpci-auth-token'}});
@@ -1227,7 +1227,7 @@ async function loadVehicles(){
     let vehicles=[];
     if(currentStore==='takamatsu'){
       // 高松: bt_vehicles（車両マスター・管理APPと共通）+ vehicle_twins + fleet/reservations + 走行距離
-      // v2.6.6: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
+      // v2.6.7: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
       const _n=new Date();const today=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
       const [{data:cars},{data:twins},{data:fleetAll},{data:resvAll},{data:mileageAll}]=await Promise.all([
         sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').eq('active',true).order('type').order('code'),
@@ -1326,16 +1326,28 @@ async function loadVehicles(){
 }
 
 // ===== クラス定義 =====
-// v2.6.6: BUDDICA TOURING 高松店のクラス定義（AA含む7クラス）
-const NAHA_CLASS_DEF={
-  'AA':{name:'AAクラス',label:'ハイエンド車両（ベンツ / ランボ / ロールス / フェラーリ等）'},
-  'A':{name:'Aクラス',label:'高級系MV（アルファード / D5）'},
-  'B':{name:'Bクラス',label:'一般MV（ノア / セレナ / ヴォクシー）'},
-  'C':{name:'Cクラス',label:'コンパクトSUV（ロッキー / ヤリスクロス）'},
-  'S':{name:'Sクラス',label:'SUV（ハリアー / RAV4）'},
-  'H':{name:'Hクラス',label:'セダン（カムリ等）'},
-  'F':{name:'Fクラス',label:'コンパクト（アクア / ヴィッツ）'},
+// v2.6.7: クラス定義は bt_classes（マスター）から動的取得。車種例ハードコード撤去 — マスターが真実
+let NAHA_CLASS_DEF={
+  'AA':{name:'AAクラス',label:'ハイエンド車両'},
+  'A':{name:'Aクラス',label:'高級系MV'},
+  'B':{name:'Bクラス',label:'一般MV'},
+  'C':{name:'Cクラス',label:'コンパクトSUV'},
+  'S':{name:'Sクラス',label:'SUV'},
+  'H':{name:'Hクラス',label:'セダン'},
+  'F':{name:'Fクラス',label:'コンパクト'},
 };
+let CLASS_ORDER_DYNAMIC=null;
+async function syncClassDefFromMaster(){
+  try{
+    const{data,error}=await sb.from('bt_classes').select('*').eq('store_id','tkm').order('sort_order',{ascending:true});
+    if(error||!data||data.length===0){console.warn('[bt_classes sync]',error||'no data');return;}
+    const def={};const order=[];
+    data.forEach(c=>{def[c.id]={name:c.id+'クラス',label:c.name||c.id};order.push(c.id);});
+    NAHA_CLASS_DEF=def;
+    CLASS_ORDER_DYNAMIC=order;
+    console.log('[bt_classes synced from master]',order);
+  }catch(e){console.warn('[bt_classes sync error]',e);}
+}
 const SPK_CLASS_DEF={
   'LUX':{name:'高級ミニバン',label:'アルファード / ヴェルファイア'},
   'MPV':{name:'ミニバン',label:'デリカD5 / ノア / ステップワゴン'},
@@ -1378,7 +1390,8 @@ function renderVehicleList(vehicles, store){
     if(!groups[cid]) groups[cid]=[];
     groups[cid].push(v);
   });
-  const classOrder=st2==='takamatsu'?['AA','A','B','C','S','H','F']:['LUX','MPV','SUV','CSUV','SDN','CPT','OTH'];
+  // v2.6.7: bt_classes から取得した動的順序を優先、未取得時はBT固定順
+  const classOrder=st2==='takamatsu'?(CLASS_ORDER_DYNAMIC||['AA','A','B','C','S','H','F']):['LUX','MPV','SUV','CSUV','SDN','CPT','OTH'];
 
   let html='';
   classOrder.forEach(cid=>{
@@ -1819,6 +1832,8 @@ function renderVehicleCard(v){
 
 // ===== 起動処理 =====
 initLogin();
+// v2.6.7: bt_classes マスターから動的にクラス定義を取得（起動時に実行）
+syncClassDefFromMaster();
 // 前回ログイン済みなら直接 SM へ
 if(currentStaff){
   updateStaffHeader();
