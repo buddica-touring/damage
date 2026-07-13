@@ -1,5 +1,5 @@
 // BUDDICA TOURING 車両チェック Service Worker v8
-const CACHE = 'buddica-touring-damage-v11';
+const CACHE = 'buddica-touring-damage-v12';
 
 self.addEventListener('install', e => {
   // キャッシュはしない（常に最新を取得）
