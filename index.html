@@ -606,7 +606,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#eef2f7;font-family:
 <div class="screen" id="sm">
   <div class="sm-hd">
     <div class="sm-hd-top">
-      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.7.1</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
+      <div class="sm-logo" style="display:flex;align-items:center;gap:5px;">BUDDICA TOURING <span style="font-size:8px;color:#4488cc88;font-weight:600;letter-spacing:1px;">v2.7.2</span><span id="rtDot" class="rt-dot" title="接続中..."></span></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="font-size:10px;color:#88aacc;" id="smStaffLabel"></div>
         <button onclick="reloadVehicles()" id="smReloadBtn" style="font-size:9px;color:#88ccff;background:#ffffff10;border:1px solid #88ccff30;border-radius:6px;padding:3px 8px;cursor:pointer;" title="車両一覧を更新">🔄</button>
@@ -1230,7 +1230,7 @@ async function loadVehicles(){
       // v2.6.7: bt_cars(廃止)→bt_vehicles(共通マスター)に統一。code/plate_no/type で連動
       const _n=new Date();const today=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
       const [{data:cars},{data:twins},{data:fleetAll},{data:resvAll},{data:mileageAll}]=await Promise.all([
-        sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').eq('active',true).order('type').order('code'),
+        sb.from('bt_vehicles').select('code,name,plate_no,type,year,color,seats,active').order('type').order('code'), // ★2026-09-20 activeフィルタ撤去=未稼働の増台車(3710等)も傷チェックで初期登録できるように(未稼働はバッジで区別)
         sb.from('vehicle_twins').select('id,status,current_damages,current_resv_no,current_customer,last_check_at,last_check_staff,last_event_id,odometer,rental_count,share_token,share_enabled,display_label').eq('store','takamatsu'),
         sb.from('bt_fleet').select('reservation_id,vehicle_code'),
         sb.from('bt_reservations').select('id,name,lend_date,lend_time,return_date,return_time,ota').not('status','eq','cancelled').not('status','eq','キャンセル').lte('start_date',today).gte('end_date',today).order('start_date',{ascending:false}).limit(300),
@@ -1267,7 +1267,7 @@ async function loadVehicles(){
           share_token:twMap[vcode]?.share_token||null,
           share_enabled:twMap[vcode]?.share_enabled||false,
           display_label:twMap[vcode]?.display_label||null,
-          vehicles:{name:car.name,plate_no:car.plate_no,code:vcode,class_id:car.type,year:car.year,color:car.color,seats:car.seats}
+          vehicles:{name:car.name,plate_no:car.plate_no,code:vcode,class_id:car.type,year:car.year,color:car.color,seats:car.seats,active:car.active}
         };
       });
     } else {
@@ -1468,6 +1468,7 @@ function renderVehicleList(vehicles, store){
               </div>
               ${dmgCnt>0?`<div class="sm-dmg">傷${dmgCnt}件</div>`:''}
               ${!isReg?`<div class="sm-badge-unreg">⚡ 要初期登録</div>`:''}
+              ${vInfo.active===false?`<div class="sm-badge-unreg" style="color:#94a3b8;border-color:#94a3b855;background:#94a3b815;">🅿️ 未稼働</div>`:''}
             </div>
             ${resvLine}
             <div class="sm-presence-inline" id="spres_${v.id}"></div>
